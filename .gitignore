@@ -1,0 +1,11 @@
+.DS_Store
+secrets/*
+!secrets/.gitkeep
+cdk.out/*
+node_modules/*
+
+# Not sure about these, excluding for now
+cdk.context.json
+index.js
+static-site.js
+
