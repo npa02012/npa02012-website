@@ -1,5 +1,5 @@
 {
-  "app": "node lib/index",
+  "app": "node components/infrastructure/lib/index",
   "context": {
     "domain": "npa02012.com",
     "subdomain": "www",

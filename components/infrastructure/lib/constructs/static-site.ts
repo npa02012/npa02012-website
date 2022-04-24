@@ -109,7 +109,7 @@ export class StaticSite extends Construct {
 
     // Deploy site contents to S3 bucket
     const bucketDeployment = new s3deploy.BucketDeployment(this, 'DeployWithInvalidation', {
-      sources: [s3deploy.Source.asset('./frontend/dist/todo-application')],
+      sources: [s3deploy.Source.asset('./components/frontend/dist/todo-application')],
       destinationBucket: siteBucket,
       distribution,
       distributionPaths: ['/*'],

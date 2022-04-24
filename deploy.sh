@@ -2,17 +2,12 @@
 set -e
 
 #
-npm install
-npm run build
+npm install --prefix components/infrastructure
+npm run build --prefix components/infrastructure
 
 #
-npm install --prefix frontend
-npm run build --prefix frontend
+npm install --prefix components/frontend
+npm run build --prefix components/frontend
 
 #
 cdk deploy
-
-#
-rm lib/*.js
-
-

@@ -1,16 +1,11 @@
 .DS_Store
 cdk.out/*
-node_modules/*
+components/infrastructure/node_modules/*
 
-lib/*.js
-lib/constructs/*.js
+components/infrastructure/lib/*.js
+components/infrastructure/lib/constructs/*.js
 
-frontend/.angular/
+components/frontend/.angular/
 
-frontend/browserslist
-frontend/e2e/
-
-frontend/tsconfig.app.json
-frontend/tsconfig.json
-frontend/tsconfig.spec.json
-frontend/tslint.json
+components/frontend/browserslist
+components/frontend/e2e/
