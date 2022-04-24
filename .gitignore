@@ -1,11 +1,16 @@
 .DS_Store
-secrets/*
-!secrets/.gitkeep
 cdk.out/*
 node_modules/*
 
-# Not sure about these, excluding for now
-cdk.context.json
-index.js
-static-site.js
+lib/*.js
+lib/constructs/*.js
 
+frontend/.angular/
+
+frontend/browserslist
+frontend/e2e/
+
+frontend/tsconfig.app.json
+frontend/tsconfig.json
+frontend/tsconfig.spec.json
+frontend/tslint.json

@@ -9,6 +9,7 @@ import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { CfnOutput, Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
+import { DynamoResources } from './dynamo';
 
 export interface StaticSiteProps {
   domainName: string;
@@ -22,9 +23,14 @@ export interface StaticSiteProps {
  * Route53 alias record, and ACM certificate.
  */
 export class StaticSite extends Construct {
+  dynamoResources: DynamoResources;
   constructor(parent: Stack, name: string, props: StaticSiteProps) {
     super(parent, name);
 
+    // Dynamo DB
+    this.dynamoResources = new DynamoResources(this, 'npa02012DynamoResources', {name: 'ItemsListTable'});
+
+    //
     const zone = route53.HostedZone.fromLookup(this, 'Zone', { domainName: props.domainName });
     const siteDomain = props.siteSubDomain + '.' + props.domainName;
     const cloudfrontOAI = new cloudfront.OriginAccessIdentity(this, 'cloudfront-OAI', {
@@ -102,11 +108,12 @@ export class StaticSite extends Construct {
     });
 
     // Deploy site contents to S3 bucket
-    new s3deploy.BucketDeployment(this, 'DeployWithInvalidation', {
-      sources: [s3deploy.Source.asset('./site-contents')],
+    const bucketDeployment = new s3deploy.BucketDeployment(this, 'DeployWithInvalidation', {
+      sources: [s3deploy.Source.asset('./frontend/dist/todo-application')],
       destinationBucket: siteBucket,
       distribution,
       distributionPaths: ['/*'],
     });
+    bucketDeployment.node.addDependency(siteBucket);
   }
 }

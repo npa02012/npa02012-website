@@ -67,15 +67,3 @@ npm install
 
 #### Website Setup
 * Route53 **Register Domain** - *npa02012.com*.
-
-
-# Building Website
-
-```
-npm run build
-# cdk bootstrap  # should only need to run once
-cdk deploy \
-	-c accountId=*** \
-	-c domain=npa02012.com \
-	-c subdomain=www
-```

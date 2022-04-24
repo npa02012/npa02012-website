@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { StaticSite } from './static-site';
+import { StaticSite } from './constructs/static-site';
 
 /**
  * This stack relies on getting the domain name from CDK context.
@@ -14,11 +14,11 @@ import { StaticSite } from './static-site';
  *   }
  * }
 **/
-class MyStaticSiteStack extends cdk.Stack {
+class WebsiteStack extends cdk.Stack {
     constructor(parent: cdk.App, name: string, props: cdk.StackProps) {
         super(parent, name, props);
 
-        new StaticSite(this, 'StaticSite', {
+        new StaticSite(this, 'npa02012-website-construct', {
             domainName: this.node.tryGetContext('domain'),
             siteSubDomain: this.node.tryGetContext('subdomain'),
         });
@@ -27,7 +27,7 @@ class MyStaticSiteStack extends cdk.Stack {
 
 const app = new cdk.App();
 
-new MyStaticSiteStack(app, 'MyStaticSite', {
+new WebsiteStack(app, 'prod-us-east-1-npa02012-website', {
     /**
      * This is required for our use of hosted-zone lookup.
      *

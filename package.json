@@ -1,21 +1,19 @@
 {
   "name": "static-site",
   "version": "1.0.0",
-  "description": "Infrastructure for an HTTPS static site using S3 and CloudFront",
+  "description": "Infrastructure for npa02012.com",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
     "cdk": "cdk"
   },
   "author": {
-    "name": "Amazon Web Services",
-    "url": "https://aws.amazon.com",
-    "organization": true
+    "name": "Nicolas Alvarez"
   },
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/node": "^10.17.0",
-    "aws-cdk": "*",
+    "aws-cdk": "^2.0.0",
     "typescript": "~3.9.7"
   },
   "dependencies": {
