@@ -42,6 +42,7 @@ chmod 400 ./***-manual.pem
 ```
 
 * Add an SSH Key on the EC2 Instance so that it can access this repository.
+    * https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
 
 Custom software on EC2:  
 
@@ -55,14 +56,13 @@ sudo yum install git -y
 # Install NodeJS and npm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
 . ~/.nvm/nvm.sh
-nvm install node
+
+#nvm install node  # Not working anymore
+nvm install 16
 node -e "console.log('Running Node.js ' + process.version)"
 
 # Install aws-cdk
 npm install -g aws-cdk
-
-# Other npm
-npm install
 ```
 
 #### Website Setup

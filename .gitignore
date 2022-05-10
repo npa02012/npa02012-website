@@ -1,6 +1,7 @@
 .DS_Store
 cdk.out/*
 components/infrastructure/node_modules/*
+node_modules
 
 components/infrastructure/lib/*.js
 components/infrastructure/lib/constructs/*.js
@@ -9,3 +10,16 @@ components/frontend/.angular/
 
 components/frontend/browserslist
 components/frontend/e2e/
+
+
+!jest.config.js
+*.d.ts
+
+.cdk.staging
+cdk.out
+components/frontend/**/*.js
+components/functions/add-item/index.js
+components/functions/get-items/index.js
+components/functions/shared-code/nodejs/*.js
+
+
