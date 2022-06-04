@@ -33,35 +33,76 @@ export class StaticSite extends Construct {
       domainName: props.domainName,  //'npa02012.com'
     });
 
-    const frontendCertificate = new acm.DnsValidatedCertificate(this, 'TodoApplicationFrontendCertificate', {
+    const mainCertificate = new acm.DnsValidatedCertificate(this, 'TodoApplicationFrontendMainCertificate', {
       domainName: 'www.npa02012.com',
       hostedZone: hostedZone,
       region: 'us-east-1'
     });
+
+    const portalCertificate = new acm.DnsValidatedCertificate(this, 'TodoApplicationFrontendCertificate', {
+      domainName: 'www.portal.npa02012.com',
+      hostedZone: hostedZone,
+      region: 'us-east-1'
+    });
+
 
     const apiCertificate = new acm.DnsValidatedCertificate(this, 'TodoApplicationApiCertificate', {
       domainName: 'todoapplication-api.npa02012.com',
       hostedZone: hostedZone
     });
 
-    const frontendBucket = new s3.Bucket(this, 'TodoApplicationFrontend', {
+    // Portal bucket and CF Web Dist
+    const frontendPortalBucket = new s3.Bucket(this, 'portal-npa02012-site-contents', {
       websiteIndexDocument: 'index.html',
       publicReadAccess: true,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true
     });
 
-    const bucketDeployment = new s3deploy.BucketDeployment(this, 'DeployTodoApplicationFrontend', {
+    const portalBucketDeployment = new s3deploy.BucketDeployment(this, 'DeployPortalNpa02012', {
       sources: [s3deploy.Source.asset(`components/frontend/dist/todo-application`)],
-      destinationBucket: frontendBucket
+      destinationBucket: frontendPortalBucket
     });
-    bucketDeployment.node.addDependency(frontendBucket);
+    portalBucketDeployment.node.addDependency(frontendPortalBucket);
 
-    const distribution = new cloudfront.CloudFrontWebDistribution(this, 'SiteDistribution', {
+    const portalDistribution = new cloudfront.CloudFrontWebDistribution(this, 'PortalSiteDistribution', {
       originConfigs: [
         {
           s3OriginSource: {
-            s3BucketSource: frontendBucket
+            s3BucketSource: frontendPortalBucket
+          },
+          behaviors : [ { isDefaultBehavior: true } ],
+        }
+      ],
+      viewerCertificate: {
+        aliases: [ 'www.portal.npa02012.com' ],
+        props: {
+          acmCertificateArn: portalCertificate.certificateArn,
+          sslSupportMethod: "sni-only",
+          minimumProtocolVersion: "TLSv1.2_2021"
+        }
+      }
+    });
+
+    // Main bucket and CF Web Dist
+    const frontendMainBucket = new s3.Bucket(this, 'main-npa02012-site-contents', {
+      websiteIndexDocument: 'index.html',
+      publicReadAccess: true,
+      removalPolicy: RemovalPolicy.DESTROY,
+      autoDeleteObjects: true
+    });
+
+    const mainBucketDeployment = new s3deploy.BucketDeployment(this, 'DeployMainNpa02012', {
+      sources: [s3deploy.Source.asset(`components/frontend-main`)],
+      destinationBucket: frontendMainBucket
+    });
+    mainBucketDeployment.node.addDependency(frontendMainBucket);
+
+    const mainDistribution = new cloudfront.CloudFrontWebDistribution(this, 'mainSiteDistribution', {
+      originConfigs: [
+        {
+          s3OriginSource: {
+            s3BucketSource: frontendMainBucket
           },
           behaviors : [ { isDefaultBehavior: true } ],
         }
@@ -69,13 +110,15 @@ export class StaticSite extends Construct {
       viewerCertificate: {
         aliases: [ 'www.npa02012.com' ],
         props: {
-          acmCertificateArn: frontendCertificate.certificateArn,
+          acmCertificateArn: mainCertificate.certificateArn,
           sslSupportMethod: "sni-only",
           minimumProtocolVersion: "TLSv1.2_2021"
         }
       }
     });
 
+
+    // Dynamo DB
     const todoItemsTable = new dynamodb.Table(this, 'TodoApplicationTodoItemsTable', {
       partitionKey: {
         name: 'who',
@@ -88,6 +131,7 @@ export class StaticSite extends Construct {
       removalPolicy: RemovalPolicy.DESTROY
     });
 
+    // Cognito
     const userPool = new cognito.UserPool(this, "TodoApplicationUserPool", {
       selfSignUpEnabled: true,
       signInAliases: { email: true },
@@ -108,8 +152,8 @@ export class StaticSite extends Construct {
           authorizationCodeGrant: true,
         },
         scopes: [ cognito.OAuthScope.OPENID ],
-        callbackUrls: [ `https://www.npa02012.com/` ],
-        logoutUrls: [ `https://www.npa02012.com/` ]
+        callbackUrls: [ `https://www.portal.npa02012.com/` ],
+        logoutUrls: [ `https://www.portal.npa02012.com/` ]
       }
     });
 
@@ -126,7 +170,7 @@ export class StaticSite extends Construct {
       email: 'guest@npa02012.com',
     });
 
-
+    // Lambda
     const sharedCodeLayer = new lambda.LayerVersion(this, 'TodoApplicationSharedCode', {
       code: lambda.Code.fromAsset('components/functions/shared-code'),
       compatibleRuntimes: [lambda.Runtime.NODEJS_14_X]
@@ -185,8 +229,8 @@ export class StaticSite extends Construct {
       authorizer: authorizer
     })
 
-    const frontendConfig = {
-      serverUrl: `https://www.npa02012.com/`,
+    const frontendPortalConfig = {
+      serverUrl: `https://www.portal.npa02012.com/`,
       region: 'us-east-1',
       cognitoClientId: userPoolClient.userPoolClientId,
       cognitoDomain: 'todo-application',
@@ -194,17 +238,17 @@ export class StaticSite extends Construct {
       lastChanged: new Date().toUTCString()
     };
 
-    const dataString = `window.AWSConfig = ${JSON.stringify(frontendConfig, null, 4)};`;
+    const dataString = `window.AWSConfig = ${JSON.stringify(frontendPortalConfig, null, 4)};`;
 
     const putUpdate = {
       service: 'S3',
       action: 'putObject',
       parameters: {
         Body: dataString,
-        Bucket: `${frontendBucket.bucketName}`,
+        Bucket: `${frontendPortalBucket.bucketName}`,
         Key: 'config.js',
       },
-      physicalResourceId: customResources.PhysicalResourceId.of(`${frontendBucket.bucketName}`)
+      physicalResourceId: customResources.PhysicalResourceId.of(`${frontendPortalBucket.bucketName}`)
     };
 
     const s3Upload = new customResources.AwsCustomResource(this, 'TodoApplicationSetConfigJS', {
@@ -212,14 +256,21 @@ export class StaticSite extends Construct {
       onUpdate: putUpdate,
       onCreate: putUpdate,
     });
-    s3Upload.node.addDependency(bucketDeployment);
+    s3Upload.node.addDependency(portalBucketDeployment);
     s3Upload.node.addDependency(apiGateway);
     s3Upload.node.addDependency(userPoolClient);
 
-    new route53.ARecord( this, "TodoApplicationWebsiteRecord", {
+    new route53.ARecord( this, "Npa02012MainWebsiteRecord", {
       recordName:  'www.npa02012.com',
       zone: hostedZone,
-      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution))
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(mainDistribution))
+    });
+
+
+    new route53.ARecord( this, "TodoApplicationWebsiteRecord", {
+      recordName:  'www.portal.npa02012.com',
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(portalDistribution))
     });
 
     new route53.ARecord( this, "TodoApplicationAPIRecord", {
