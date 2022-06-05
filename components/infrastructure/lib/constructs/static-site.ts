@@ -15,39 +15,37 @@ import { Construct } from 'constructs';
 import { UserPoolUser } from './UserPoolUser';
 
 export interface StaticSiteProps {
-  domainName: string;
-  siteSubDomain: string;
+  domain: string;
+  portalSubDomain: string;
+  apiSubDomain: string;
+  region: string;
 }
 
-/**
- * Static site infrastructure, which deploys site content to an S3 bucket.
- *
- * The site redirects from HTTP to HTTPS, using a CloudFront distribution,
- * Route53 alias record, and ACM certificate.
- */
 export class StaticSite extends Construct {
   constructor(parent: Stack, name: string, props: StaticSiteProps) {
     super(parent, name);
 
     const hostedZone = route53.HostedZone.fromLookup(this, 'TodoApplicationHostedZone', {
-      domainName: props.domainName,  //'npa02012.com'
+      domainName: props.domain,
     });
 
     const mainCertificate = new acm.DnsValidatedCertificate(this, 'TodoApplicationFrontendMainCertificate', {
-      domainName: 'www.npa02012.com',
+      domainName: `www.${props.domain}`,
+      subjectAlternativeNames: [props.domain],
       hostedZone: hostedZone,
-      region: 'us-east-1'
+      region: props.region
     });
 
     const portalCertificate = new acm.DnsValidatedCertificate(this, 'TodoApplicationFrontendCertificate', {
-      domainName: 'www.portal.npa02012.com',
+      domainName: `www.${props.portalSubDomain}.${props.domain}`,
+      subjectAlternativeNames: [`${props.portalSubDomain}.${props.domain}`],
       hostedZone: hostedZone,
-      region: 'us-east-1'
+      region: props.region
     });
 
 
     const apiCertificate = new acm.DnsValidatedCertificate(this, 'TodoApplicationApiCertificate', {
-      domainName: 'todoapplication-api.npa02012.com',
+      domainName: `${props.apiSubDomain}.${props.domain}`,
       hostedZone: hostedZone
     });
 
@@ -59,11 +57,7 @@ export class StaticSite extends Construct {
       autoDeleteObjects: true
     });
 
-    const portalBucketDeployment = new s3deploy.BucketDeployment(this, 'DeployPortalNpa02012', {
-      sources: [s3deploy.Source.asset(`components/frontend/dist/todo-application`)],
-      destinationBucket: frontendPortalBucket
-    });
-    portalBucketDeployment.node.addDependency(frontendPortalBucket);
+
 
     const portalDistribution = new cloudfront.CloudFrontWebDistribution(this, 'PortalSiteDistribution', {
       originConfigs: [
@@ -75,7 +69,7 @@ export class StaticSite extends Construct {
         }
       ],
       viewerCertificate: {
-        aliases: [ 'www.portal.npa02012.com' ],
+	aliases: [ `www.${props.portalSubDomain}.${props.domain}`, `${props.portalSubDomain}.${props.domain}` ],
         props: {
           acmCertificateArn: portalCertificate.certificateArn,
           sslSupportMethod: "sni-only",
@@ -84,6 +78,14 @@ export class StaticSite extends Construct {
       }
     });
 
+    const portalBucketDeployment = new s3deploy.BucketDeployment(this, 'DeployPortalNpa02012', {
+      sources: [s3deploy.Source.asset(`components/frontend/dist/todo-application`)],
+      destinationBucket: frontendPortalBucket,
+      distribution: portalDistribution,
+      distributionPaths: ['/*'],  // Invalidation for CF distribution caching
+    });
+    portalBucketDeployment.node.addDependency(frontendPortalBucket);
+
     // Main bucket and CF Web Dist
     const frontendMainBucket = new s3.Bucket(this, 'main-npa02012-site-contents', {
       websiteIndexDocument: 'index.html',
@@ -91,12 +93,6 @@ export class StaticSite extends Construct {
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true
     });
-
-    const mainBucketDeployment = new s3deploy.BucketDeployment(this, 'DeployMainNpa02012', {
-      sources: [s3deploy.Source.asset(`components/frontend-main`)],
-      destinationBucket: frontendMainBucket
-    });
-    mainBucketDeployment.node.addDependency(frontendMainBucket);
 
     const mainDistribution = new cloudfront.CloudFrontWebDistribution(this, 'mainSiteDistribution', {
       originConfigs: [
@@ -108,7 +104,7 @@ export class StaticSite extends Construct {
         }
       ],
       viewerCertificate: {
-        aliases: [ 'www.npa02012.com' ],
+        aliases: [ `www.${props.domain}`, props.domain ],
         props: {
           acmCertificateArn: mainCertificate.certificateArn,
           sslSupportMethod: "sni-only",
@@ -116,6 +112,15 @@ export class StaticSite extends Construct {
         }
       }
     });
+
+    const mainBucketDeployment = new s3deploy.BucketDeployment(this, 'DeployMainNpa02012', {
+      sources: [s3deploy.Source.asset(`components/frontend-main`)],
+      destinationBucket: frontendMainBucket,
+      distribution: mainDistribution,
+      distributionPaths: ['/*'],
+    });
+    mainBucketDeployment.node.addDependency(frontendMainBucket);
+
 
 
     // Dynamo DB
@@ -152,8 +157,8 @@ export class StaticSite extends Construct {
           authorizationCodeGrant: true,
         },
         scopes: [ cognito.OAuthScope.OPENID ],
-        callbackUrls: [ `https://www.portal.npa02012.com/` ],
-        logoutUrls: [ `https://www.portal.npa02012.com/` ]
+        callbackUrls: [ `https://www.${props.portalSubDomain}.${props.domain}/` ],
+	logoutUrls: [ `https://www.${props.portalSubDomain}.${props.domain}/` ],
       }
     });
 
@@ -165,7 +170,6 @@ export class StaticSite extends Construct {
 
     new UserPoolUser(parent, 'Guest', {
       userPool: userPool,
-      //username: 'guest',
       password: 'password',
       email: 'guest@npa02012.com',
     });
@@ -207,11 +211,11 @@ export class StaticSite extends Construct {
     const apiGateway = new apigateway.RestApi(this, 'TodoApplicationApiGateway', {
       restApiName: 'TodoApplicationApi',
       domainName: {
-        domainName: 'todoapplication-api.npa02012.com',
+	domainName: `${props.apiSubDomain}.${props.domain}`,
         certificate: apiCertificate,
         securityPolicy: apigateway.SecurityPolicy.TLS_1_2
       }
-    })
+    });
 
     const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'TodoApplicationAuthorizer', {
       cognitoUserPools: [userPool]
@@ -224,17 +228,17 @@ export class StaticSite extends Construct {
     });
     itemResource.addMethod('PUT', new apigateway.LambdaIntegration(addItemLambda), {
       authorizer: authorizer
-    })
+    });
     itemResource.addMethod('GET', new apigateway.LambdaIntegration(getItemsLambda), {
       authorizer: authorizer
-    })
+    });
 
     const frontendPortalConfig = {
-      serverUrl: `https://www.portal.npa02012.com/`,
-      region: 'us-east-1',
+      serverUrl: `https://www.${props.portalSubDomain}.${props.domain}/`,
+      region: props.region,
       cognitoClientId: userPoolClient.userPoolClientId,
       cognitoDomain: 'todo-application',
-      itemsApi: 'https://todoapplication-api.npa02012.com/',
+      itemsApi: `https://${props.apiSubDomain}.${props.domain}/`,
       lastChanged: new Date().toUTCString()
     };
 
@@ -260,25 +264,35 @@ export class StaticSite extends Construct {
     s3Upload.node.addDependency(apiGateway);
     s3Upload.node.addDependency(userPoolClient);
 
-    new route53.ARecord( this, "Npa02012MainWebsiteRecord", {
-      recordName:  'www.npa02012.com',
+    new route53.ARecord( this, "MainWebsiteWwwRecord", {
+      recordName: `www.${props.domain}`,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(mainDistribution))
     });
 
+    new route53.ARecord( this, "MainWebsiteRecord", {
+      recordName: `${props.domain}`,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(mainDistribution))
+    });
 
-    new route53.ARecord( this, "TodoApplicationWebsiteRecord", {
-      recordName:  'www.portal.npa02012.com',
+    new route53.ARecord( this, "PortalWebsiteWwwRecord", {
+      recordName: `www.${props.portalSubDomain}.${props.domain}`,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(portalDistribution))
     });
 
-    new route53.ARecord( this, "TodoApplicationAPIRecord", {
-      recordName:  'todoapplication-api.npa02012.com',
+    new route53.ARecord( this, "PortalWebsiteRecord", {
+      recordName: `${props.portalSubDomain}.${props.domain}`,
+      zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(portalDistribution))
+    });
+
+    new route53.ARecord( this, "ApiRecord", {
+      recordName: `${props.apiSubDomain}.${props.domain}`,
       zone: hostedZone,
       target: route53.RecordTarget.fromAlias(new route53Targets.ApiGateway(apiGateway))
     }); 
-    
 
   }
 }

@@ -2,7 +2,8 @@
   "app": "node components/infrastructure/lib/index",
   "context": {
     "domain": "npa02012.com",
-    "subdomain": "www",
+    "portalSubDomain": "portal",
+    "apiSubDomain": "api",
     "accountId": "724723130513"
   }
 }
