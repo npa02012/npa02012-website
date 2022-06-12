@@ -42,6 +42,10 @@ export class AppComponent {
   login() {
     this.cognitoService.login();
   }
+  
+  guestLogin() {
+    this.cognitoService.guestLogin();
+  }
 
   logout() {
     this.cognitoService.logout();

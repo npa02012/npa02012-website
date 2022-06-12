@@ -4,4 +4,6 @@ export interface FrontendConfig {
     cognitoClientId: string;
     cognitoDomain: string;
     itemsApi: string;
+    guestEmail: string;
+    guestPassword: string;
 }

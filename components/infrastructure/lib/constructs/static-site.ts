@@ -142,23 +142,26 @@ export class StaticSite extends Construct {
       signInAliases: { email: true },
       autoVerify: { email: true },
       passwordPolicy: {
-	minLength: 8,
+  	    minLength: 8,
         requireLowercase: false,
         requireUppercase: false,
-	requireDigits: false,
-	requireSymbols: false,
+        requireDigits: false,
+  	    requireSymbols: false,
       },
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
     const userPoolClient = userPool.addClient("TodoApplicationUserPoolClient", {
+      authFlows: {
+        userPassword: true,
+      },
       oAuth: {
         flows: {
           authorizationCodeGrant: true,
         },
         scopes: [ cognito.OAuthScope.OPENID ],
         callbackUrls: [ `https://www.${props.portalSubDomain}.${props.domain}/` ],
-	logoutUrls: [ `https://www.${props.portalSubDomain}.${props.domain}/` ],
+	      logoutUrls: [ `https://www.${props.portalSubDomain}.${props.domain}/` ],
       }
     });
 
@@ -167,11 +170,13 @@ export class StaticSite extends Construct {
         domainPrefix: "todo-application",
       },
     });
-
+    
+    const guestEmail = 'guest@npa02012.com';
+    const guestPassword = 'password';
     new UserPoolUser(parent, 'Guest', {
       userPool: userPool,
-      password: 'password',
-      email: 'guest@npa02012.com',
+      password: guestPassword,
+      email: guestEmail,
     });
 
     // Lambda
@@ -239,7 +244,9 @@ export class StaticSite extends Construct {
       cognitoClientId: userPoolClient.userPoolClientId,
       cognitoDomain: 'todo-application',
       itemsApi: `https://${props.apiSubDomain}.${props.domain}/`,
-      lastChanged: new Date().toUTCString()
+      lastChanged: new Date().toUTCString(),
+      guestEmail: guestEmail,
+      guestPassword: guestPassword,
     };
 
     const dataString = `window.AWSConfig = ${JSON.stringify(frontendPortalConfig, null, 4)};`;
