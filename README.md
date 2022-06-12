@@ -1,3 +1,7 @@
+# About
+
+This repository holds aws-cdk, frontend, and other application code to build and deploy www.npa02012.com.
+
 # Initial Manual Setup
 
 #### AWS Account Setup
