@@ -2,6 +2,14 @@
 
 This repository holds aws-cdk, frontend, and other application code to build and deploy www.npa02012.com.
 
+# Code Organization
+
+The diagram below shows how the different resources in the AWS-CDK code are related. It will be useful if you want to break *static-site.ts* into multiple files/constructs.
+
+![](./readme_figures/npa02012-website.png)
+
+
+
 # Initial Manual Setup
 
 #### AWS Account Setup
